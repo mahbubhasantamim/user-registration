@@ -1,6 +1,6 @@
-import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LoginRegTemp } from "../layouts/LoginRegTemp";
 import {
   Form,
@@ -10,6 +10,14 @@ import {
 } from "./modules/formComponents/formComponents";
 
 const Registration = (props) => {
+  const token = localStorage.getItem("user-auth");
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (token) {
+      navigate("/");
+    }
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,7 +31,7 @@ const Registration = (props) => {
     password: "",
     checkPassword: "",
   });
-  const [passwordError, setPasswordError] = useState(false);
+  // const [passwordError, setPasswordError] = useState(false);
 
   const handleInputChange = (event) => {
     const name = event.target.name;
@@ -38,44 +46,43 @@ const Registration = (props) => {
     });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     //validation
     let hasErrors = false;
     const newErrors = {};
 
-    if (String(formData.name).trim() === "") {
-      newErrors.name = "Name is required";
-      hasErrors = true;
-    } else {
-      newErrors.name = "";
-    }
+    try {
+      const response = await axios.post("http://localhost:3000/api/signup", {
+        name: String(formData.name),
+        email: String(formData.email),
+        password: String(formData.password),
+        checkPassword: String(formData.checkPassword),
+      });
+      console.log(response.data);
+    } catch (error) {
+      //VALIDATION
+      const { name, email, password, checkPassword } =
+        error.response.data.errors;
 
-    if (String(formData.email).trim() === "") {
-      newErrors.email = "Email is required";
-      hasErrors = true;
-    } else {
-      newErrors.email = "";
+      if (name) {
+        newErrors.name = name.msg;
+        hasErrors = true;
+      }
+      if (email) {
+        newErrors.email = email.msg;
+        hasErrors = true;
+      }
+      if (password) {
+        newErrors.password = password.msg;
+        hasErrors = true;
+      }
+      if (checkPassword) {
+        newErrors.checkPassword = checkPassword.msg;
+        hasErrors = true;
+      }
     }
-
-    if (String(formData.password).trim() === "") {
-      newErrors.password = "Password is required";
-      hasErrors = true;
-    } else {
-      newErrors.password = "";
-    }
-
-    if (String(formData.checkPassword).trim() === "") {
-      newErrors.checkPassword = "Password is required";
-      hasErrors = true;
-    } else {
-      newErrors.checkPassword = "";
-      formData.password[0] !== formData.checkPassword[0]
-        ? setPasswordError(true)
-        : setPasswordError(false);
-    }
-
     // Update the errors state
     setErrors(newErrors);
 
@@ -84,21 +91,20 @@ const Registration = (props) => {
       console.log("Form has errors:", newErrors);
     } else {
       console.log("Form submitted:", formData);
-      // ... Additional logic here
-    }
+      //clear form field data
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        checkPassword: "",
+      });
 
-    console.log(formData);
+      navigate("/signin");
+    }
   };
 
   return (
     <LoginRegTemp formName="Registration">
-      <div className=" float-right m-4 text-2xl hover:cursor-pointer">
-        <FontAwesomeIcon
-          icon={faXmark}
-          onClick={props.handleReg}
-          className=" py-2 px-[10px] rounded-full hover:bg-gray-100 transition duration-500 ease-in-out"
-        />
-      </div>
       <Form onSubmit={handleSubmit}>
         <FormField
           type="text"
@@ -133,13 +139,9 @@ const Registration = (props) => {
           value={formData.checkPassword}
           onChange={handleInputChange}
           placeholder="Re-type password"
-          errorClass={passwordError ? "error" : ""}
+          // errorClass={passwordError ? "error" : ""}
         >
           <FormFieldError error={errors.checkPassword} />
-
-          {passwordError ? (
-            <FormFieldError error="Password don't match" />
-          ) : null}
         </FormField>
 
         <FormSubmit value="Submit" />
